@@ -1,12 +1,20 @@
-from requests import get
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
+from requests import get
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
-# API_KEY = "QUPENPDDC9J551DRTCW96YAW9X2ST5EG88"
 BASE_URL = "https://api.etherscan.io/api"
-# BASE_URL = "https://api.bscscan.com/api"
+
+
+class ApiService:
+    @staticmethod
+    def get_erc_20_transaction_api(address):
+        erc_20_transaction_url = make_api_url("account", "tokentx", address, startblock=0, endblock=99999999,
+                                              sort='desc')
+        response = get(erc_20_transaction_url)
+        return response.json()["result"]
 
 
 def make_api_url(module, action, address, **kwargs):

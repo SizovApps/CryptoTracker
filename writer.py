@@ -1,4 +1,5 @@
 import csv
+
 import pandas as pd
 
 HEADER_LINE = ['Адрес', 'Итого в долларах', 'Итого в ETH', 'Итого вход', 'Итого выход',
@@ -12,7 +13,7 @@ RESULTS_FOLDER_NAME = "../results/"
 
 def write_full_stats(address, result_in_dollar, result_in_altcoine, full_enter, full_exit, count_of_profit,
                      count_of_loss, tokens):
-    with open(RESULTS_FOLDER_NAME + address + '.csv', 'w', newline='') as csvfile:
+    with open(RESULTS_FOLDER_NAME + address + '.csv', 'w', newline='', encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile, delimiter=';',
                             quotechar=';', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(HEADER_LINE)
@@ -26,14 +27,14 @@ def write_full_stats(address, result_in_dollar, result_in_altcoine, full_enter, 
 
 
 def write_header_wallets_stats(token_name):
-    with open(RESULTS_FOLDER_NAME + token_name + '.csv', 'w', newline='') as all_file:
+    with open(RESULTS_FOLDER_NAME + token_name + '.csv', 'w', newline='', encoding="utf-8") as all_file:
         all_writer = csv.writer(all_file, delimiter=';', quotechar=';', quoting=csv.QUOTE_MINIMAL)
         all_writer.writerow(HEADER_LINE)
         all_writer.writerow("")
 
 
 def write_wallet(wallet, token_name):
-    with open(RESULTS_FOLDER_NAME + token_name + '.csv', 'a', newline='') as all_file:
+    with open(RESULTS_FOLDER_NAME + token_name + '.csv', 'a', newline='', encoding="utf-8") as all_file:
         all_writer = csv.writer(all_file, delimiter=';', quotechar=';', quoting=csv.QUOTE_MINIMAL)
         all_writer.writerow(
             [wallet.address, wallet.profit, wallet.profit_in_ETH, wallet.full_enter, wallet.full_exit,
@@ -41,7 +42,7 @@ def write_wallet(wallet, token_name):
 
 
 def create_excel(token_name, wallets):
-    token_file = pd.read_csv(RESULTS_FOLDER_NAME + token_name + '.csv', sep=';')
+    token_file = pd.read_csv(RESULTS_FOLDER_NAME + token_name + '.csv', sep=';', encoding="utf-8")
     token_file.to_excel(RESULTS_FOLDER_NAME + token_name + ".xlsx", index=None, header=True)
 
     with pd.ExcelWriter(RESULTS_FOLDER_NAME + token_name + ".xlsx", engine='openpyxl', mode='a') as writer:

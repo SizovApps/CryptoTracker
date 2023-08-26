@@ -1,8 +1,5 @@
-import csv
-
 from model.TokenStats import TokenStats
 from moralis_info import get_current_price
-import openpyxl
 
 from writer import write_full_stats
 
@@ -13,8 +10,9 @@ class Wallet:
     BNB_PRICE = 305
     ETH_PRICE = 1788
 
-    def __init__(self, address):
+    def __init__(self, address, balance):
         self.address = address
+        self.balance = balance
         self.erc20_transactions = dict()
         self.internal_transactions = dict()
         self.profit = dict()

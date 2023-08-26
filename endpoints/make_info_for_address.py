@@ -1,8 +1,10 @@
+import datetime
+
 from eth_waller_tracking import *
+from eth_waller_tracking import EthTracker
 from model.Wallet import *
 from services.transactions_service import set_internal_transactions
 from writer import write_wallet, write_header_wallets_stats, create_excel
-import datetime
 
 NO_DEFINED_VALUE = 100000000000
 
@@ -11,13 +13,14 @@ results_addresses = []
 
 
 def get_profit_last_month(address, token_name):
-    print("Текущий баланс ETH: ", get_account_balance(address))
+    account_eth_balance = EthTracker.get_account_balance(address)
+    print("Текущий баланс ETH: ", account_eth_balance)
 
-    wallet = Wallet(address)
+    wallet = Wallet(address, account_eth_balance)
     if wallet.address in results_addresses:
-        return [0, '0'], [0, '0']
+        return None
     try:
-        wallet.set_erc20_transactions(get_erc_20_transactions(address, datetime.datetime(2023, 5, 15, 0, 0, 0, 0)))
+        wallet.set_erc20_transactions(EthTracker.get_erc_20_transactions(address, datetime.datetime(2023, 5, 15, 0, 0, 0, 0)))
     except RuntimeError as error:
         print(error)
         print(error.args)
@@ -38,8 +41,10 @@ def make_info_for_addresses(token_name, start_time, wallet_address):
     check = [wallet_address]
 
     results = []
-    for wallet in check:
-        results.append(get_profit_last_month(wallet, token_name))
+    for address in check:
+        wallet = get_profit_last_month(address, token_name)
+        if wallet is not None:
+            results.append(wallet)
 
     create_excel(token_name, results)
 
