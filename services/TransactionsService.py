@@ -3,14 +3,14 @@ from datetime import datetime
 from requests import get
 
 from model.TransactionErc20 import TransactionErc20
-from services.ApiService import make_api_url, get_internal_transactions_api
+from services.ApiService import ApiService
 
 NO_DEFINED_VALUE = 100000000000
 ETHER_VALUE = 10 ** 18
 
 
 def get_addresses_bought_token(address):
-    transaction_url = make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1, offset=10000,
+    transaction_url = ApiService.make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1, offset=10000,
                                    sort='desc')
     response = get(transaction_url)
     data = response.json()["result"]
@@ -62,7 +62,7 @@ def get_erc_20_transactions_by_token(data, start_time, end_time, token_address, 
 
 
 def get_internal_transaction(transaction):
-    data = get_internal_transactions_api(transaction)
+    data = ApiService.get_internal_transactions_api(transaction)
     if len(data) == 0:
         return 100000000000
     first_value = data[-1]["value"]

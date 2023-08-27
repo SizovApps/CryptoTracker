@@ -7,7 +7,7 @@ from requests import get
 
 from model.BuyerTransactions import BuyerTransactions
 from model.TransactionErc20 import *
-from services.ApiService import make_api_url, get_addresses_bought_token_api, get_erc_20_transaction_api
+from services.ApiService import ApiService
 from services.TransactionsService import get_erc_20_transactions_by_token
 
 load_dotenv()
@@ -26,7 +26,7 @@ class HandleStatus(Enum):
     BREAK = 3
 
 
-class EthTracker:
+class EthTrackerService:
     HASH_FIELD = "hash"
     TOKEN_NAME_FIELD = "tokenName"
     TIME_STAMP_FIELD = "timeStamp"
@@ -39,7 +39,7 @@ class EthTracker:
 
     @staticmethod
     def get_account_balance(address):
-        balance_url = make_api_url("account", "balance", address, tag="latest")
+        balance_url = ApiService.make_api_url("account", "balance", address, tag="latest")
         response = get(balance_url)
         data = response.json()
         value = int(data["result"]) / ETHER_VALUE
@@ -51,13 +51,13 @@ class EthTracker:
         erc20_transactions = dict()
         tokens_transactions = dict()
 
-        data = get_erc_20_transaction_api(address)
+        data = ApiService.get_erc_20_transaction_api(address)
         count_of_transactions = 0
         for tx in data:
-            tx_hash = tx[EthTracker.HASH_FIELD]
-            token_name = tx[EthTracker.TOKEN_NAME_FIELD]
-            handle_status = EthTracker.should_handle_transaction(tx, tx_hash, all_transactions,
-                                                                 count_of_transactions, stop_time)
+            tx_hash = tx[EthTrackerService.HASH_FIELD]
+            token_name = tx[EthTrackerService.TOKEN_NAME_FIELD]
+            handle_status = EthTrackerService.should_handle_transaction(tx, tx_hash, all_transactions,
+                                                                        count_of_transactions, stop_time)
             if handle_status == HandleStatus.BREAK:
                 break
             if handle_status == HandleStatus.CONTINUE:
@@ -67,23 +67,23 @@ class EthTracker:
 
             if token_name not in erc20_transactions:
                 erc20_transactions[token_name] = []
-            erc20_transactions[token_name].append(EthTracker.make_erc_20_transaction(tx, address,
-                                                                                     tokens_transactions))
+            erc20_transactions[token_name].append(EthTrackerService.make_erc_20_transaction(tx, address,
+                                                                                            tokens_transactions))
 
         return erc20_transactions
 
     @staticmethod
     def make_erc_20_transaction(tx_data, address, tokens_transactions):
-        time = datetime.fromtimestamp(int(tx_data[EthTracker.TIME_STAMP_FIELD]))
-        token_name = tx_data[EthTracker.TOKEN_NAME_FIELD]
-        tx_hash = tx_data[EthTracker.HASH_FIELD]
-        from_address = tx_data[EthTracker.FROM_FIELD]
-        to_address = tx_data[EthTracker.TO_FIELD]
-        amount_of_tokens = tx_data[EthTracker.VALUE_FIELD]
-        gas_price = tx_data[EthTracker.GAS_PRICE_FIELD]
-        gas_used = tx_data[EthTracker.GAS_USED_FIELD]
+        time = datetime.fromtimestamp(int(tx_data[EthTrackerService.TIME_STAMP_FIELD]))
+        token_name = tx_data[EthTrackerService.TOKEN_NAME_FIELD]
+        tx_hash = tx_data[EthTrackerService.HASH_FIELD]
+        from_address = tx_data[EthTrackerService.FROM_FIELD]
+        to_address = tx_data[EthTrackerService.TO_FIELD]
+        amount_of_tokens = tx_data[EthTrackerService.VALUE_FIELD]
+        gas_price = tx_data[EthTrackerService.GAS_PRICE_FIELD]
+        gas_used = tx_data[EthTrackerService.GAS_USED_FIELD]
         gas_value = int(gas_price) * int(gas_used) / 10 ** 18
-        contract_address = tx_data[EthTracker.CONTRACT_ADDRESS_FIELD]
+        contract_address = tx_data[EthTrackerService.CONTRACT_ADDRESS_FIELD]
         is_from = False
 
         print(from_address)
@@ -107,7 +107,7 @@ class EthTracker:
         if count_of_transactions >= MAX_AMOUNT_OF_TRANSACTIONS:
             return HandleStatus.BREAK
 
-        if stop_time is not None and datetime.fromtimestamp(int(tx[EthTracker.TIME_STAMP_FIELD])) < stop_time:
+        if stop_time is not None and datetime.fromtimestamp(int(tx[EthTrackerService.TIME_STAMP_FIELD])) < stop_time:
             return HandleStatus.BREAK
 
         if count_of_transactions >= MAX_AMOUNT_OF_TRANSACTIONS:
@@ -115,41 +115,41 @@ class EthTracker:
 
         return HandleStatus.CHECK
 
+    @staticmethod
+    def get_transaction_of_token(address, start_time=None, end_time=None):
+        data = ApiService.get_addresses_bought_token_api(address)
+        address_bought_token = [tx["from"] for tx in data]
+        print(f"Количество транзакций: {len(data)}.")
+        transactions = []
+        count = 0
+        for buyer in address_bought_token:
+            if count > 700:
+                break
+            count += 1
+            data = ApiService.get_erc_20_transaction_api(buyer)
+            print(buyer)
+            transactions.append(
+                BuyerTransactions(buyer, get_erc_20_transactions_by_token(data, start_time, end_time, address, buyer)))
+        return transactions
+
 
 def get_account_balance(address):
-    balance_url = make_api_url("account", "balance", address, tag="latest")
+    balance_url = ApiService.make_api_url("account", "balance", address, tag="latest")
     response = get(balance_url)
     data = response.json()
     value = int(data["result"]) / ETHER_VALUE
     return value
 
 
-def get_transaction_of_token(address, start_time=None, end_time=None):
-    data = get_addresses_bought_token_api(address)
-    address_bought_token = [tx["from"] for tx in data]
-    print(f"Количество транзакций: {len(data)}.")
-    transactions = []
-    count = 0
-    for buyer in address_bought_token:
-        if count > 700:
-            break
-        count += 1
-        data = get_erc_20_transaction_api(buyer)
-        print(buyer)
-        transactions.append(
-            BuyerTransactions(buyer, get_erc_20_transactions_by_token(data, start_time, end_time, address, buyer)))
-    return transactions
-
-
 def get_first_addresses(address, startTime=None):
-    transaction_url = make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1, offset=10000,
+    transaction_url = ApiService.make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1, offset=10000,
                                    sort='asc')
     response = get(transaction_url)
     data = response.json()["result"]
 
     index = 0
     while startTime is not None and index < len(data):
-        time = datetime.fromtimestamp(int(data[index][EthTracker.TIME_STAMP_FIELD]))
+        time = datetime.fromtimestamp(int(data[index][EthTrackerService.TIME_STAMP_FIELD]))
         if time < startTime:
             index += 1
             continue
@@ -174,18 +174,18 @@ def get_erc_20_transactions(address, stop_time):
     erc20_transactions = dict()
     tokens_transactions = dict()
 
-    data = get_erc_20_transaction_api(address)
+    data = ApiService.get_erc_20_transaction_api(address)
     data = reversed(data)
     count = 0
     for tx in data:
-        time = datetime.fromtimestamp(int(tx[EthTracker.TIME_STAMP_FIELD]))
+        time = datetime.fromtimestamp(int(tx[EthTrackerService.TIME_STAMP_FIELD]))
         if time < stop_time:
             break
         if count >= MAX_AMOUNT_OF_TRANSACTIONS:
             break
-        token_name = tx[EthTracker.TOKEN_NAME_FIELD]
+        token_name = tx[EthTrackerService.TOKEN_NAME_FIELD]
         count += 1
-        hash = tx[EthTracker.HASH_FIELD]
+        hash = tx[EthTrackerService.HASH_FIELD]
         if hash in all_transactions.keys():
             continue
         all_transactions[hash] = 1
