@@ -2,7 +2,7 @@ import stats.prices
 from model.TokenProfit import TokenProfit
 from model.TokenStats import TokenStats
 from services.MoralisService import MoralisService
-from writer import write_full_stats
+from services.WriterService import WriterService
 
 
 class Wallet:
@@ -99,7 +99,7 @@ class Wallet:
         else:
             self.pnl = (self.full_exit / self.full_enter) * 100
 
-        write_full_stats(self.address, self.profit_in_dollar, self.profit_in_ETH, self.full_enter, self.full_exit,
+        WriterService.write_full_stats(self.address, self.profit_in_dollar, self.profit_in_ETH, self.full_enter, self.full_exit,
                          self.count_of_profit, self.count_of_loss, tokens)
 
     def get_sum_by_token(self, token_name):

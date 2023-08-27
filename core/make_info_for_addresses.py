@@ -1,7 +1,7 @@
 from eth_waller_tracking import EthTracker
 from model.Wallet import *
 from services.TransactionsService import set_internal_transactions
-from writer import write_wallet, write_header_wallets_stats, create_excel
+from services.WriterService import WriterService
 
 NO_DEFINED_VALUE = 100000000000
 
@@ -25,12 +25,12 @@ def get_profit_last_month(address, token_name, start_time):
 
     wallet.count_profit()
     checked_addresses.append(wallet.address)
-    write_wallet(wallet, token_name)
+    WriterService.write_wallet(wallet, token_name)
     return wallet
 
 
 def make_info_for_addresses(token_name, start_time, addresses):
-    write_header_wallets_stats(token_name)
+    WriterService.write_header_wallets_stats(token_name)
 
     results = []
     for address in addresses:
@@ -38,4 +38,4 @@ def make_info_for_addresses(token_name, start_time, addresses):
         if wallet is not None:
             results.append(wallet)
 
-    create_excel(token_name, results)
+    WriterService.create_excel(token_name, results)
