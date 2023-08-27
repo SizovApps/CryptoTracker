@@ -1,6 +1,6 @@
 from model.Wallet import *
 from services.EthTrackerService import EthTrackerService
-from services.TransactionsService import set_internal_transactions
+from services.InternalTransactionService import InternalTransactionService
 from services.WriterService import WriterService
 
 NO_DEFINED_VALUE = 100000000000
@@ -8,11 +8,11 @@ NO_DEFINED_VALUE = 100000000000
 checked_addresses = []
 
 
-def get_profit_last_month(address, token_name, start_time):
+def get_profit(address, token_name, start_time):
     account_eth_balance = EthTrackerService.get_account_balance(address)
     print("Текущий баланс ETH: ", account_eth_balance)
 
-    wallet = Wallet(address, account_eth_balance)
+    wallet = Wallet(address)
     if wallet.address in checked_addresses:
         return None
     try:
@@ -21,7 +21,7 @@ def get_profit_last_month(address, token_name, start_time):
         print(error)
         print(error.args)
 
-    set_internal_transactions(wallet)
+    InternalTransactionService.set_internal_transactions(wallet)
 
     wallet.count_profit()
     checked_addresses.append(wallet.address)
@@ -34,7 +34,7 @@ def make_info_for_addresses(token_name, start_time, addresses):
 
     results = []
     for address in addresses:
-        wallet = get_profit_last_month(address, token_name, start_time)
+        wallet = get_profit(address, token_name, start_time)
         if wallet is not None:
             results.append(wallet)
 

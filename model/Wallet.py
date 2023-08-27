@@ -9,7 +9,7 @@ class Wallet:
     BNB_PRICE = stats.prices.BNB_PRICE
     ETH_PRICE = stats.prices.ETH_PRICE
 
-    def __init__(self, address, balance):
+    def __init__(self, address, balance=0):
         self.address = address
         self.balance = balance
         self.erc20_transactions = dict()
@@ -112,9 +112,12 @@ class Wallet:
                 sum_in += internal_transaction.internal_transaction_value
             else:
                 sum_out += internal_transaction.internal_transaction_value
+        profit_in_percent = 0
+        if sum_in != 0:
+            profit_in_percent = sum_out / abs(sum_in)
         return TokenProfit(
             sum_of_profit=sum_of_profit,
             sum_in=abs(sum_in),
             sum_out=sum_out,
-            profit_in_percent=sum_out / abs(sum_in)
+            profit_in_percent=profit_in_percent
         )

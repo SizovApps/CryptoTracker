@@ -1,0 +1,3 @@
+from core.get_best_wallets_for_token import get_best_wallets_for_token
+
+get_best_wallets_for_token(token_address="0x63f314c44d164d5be423199afbfbe129d72d3ea6", token_name="Battleground", max_best_addresses=10)

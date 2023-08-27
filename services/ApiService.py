@@ -10,18 +10,18 @@ BASE_URL = "https://api.etherscan.io/api"
 
 class ApiService:
     @staticmethod
-    def get_erc_20_transaction_api(address):
-        erc_20_transaction_url = ApiService.make_api_url("account", "tokentx", address, startblock=0, endblock=99999999,
-                                              sort='desc')
-        response = get(erc_20_transaction_url)
-        return response.json()["result"]
-
-    @staticmethod
     def make_api_url(module, action, address, **kwargs):
         url = BASE_URL + f"?module={module}&action={action}&address={address}&apikey={API_KEY}"
         for key, value in kwargs.items():
             url += f"&{key}={value}"
         return url
+
+    @staticmethod
+    def get_erc_20_transaction_api(address):
+        erc_20_transaction_url = ApiService.make_api_url("account", "tokentx", address, startblock=0, endblock=99999999,
+                                              sort='desc')
+        response = get(erc_20_transaction_url)
+        return response.json()["result"]
 
     @staticmethod
     def get_addresses_bought_token_api(address):

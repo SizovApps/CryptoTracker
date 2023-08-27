@@ -8,7 +8,6 @@ from requests import get
 from model.BuyerTransactions import BuyerTransactions
 from model.TransactionErc20 import *
 from services.ApiService import ApiService
-from services.TransactionsService import get_erc_20_transactions_by_token
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -86,8 +85,6 @@ class EthTrackerService:
         contract_address = tx_data[EthTrackerService.CONTRACT_ADDRESS_FIELD]
         is_from = False
 
-        print(from_address)
-        print(address)
         if from_address.lower() == address.lower():
             is_from = True
 
@@ -123,114 +120,48 @@ class EthTrackerService:
         transactions = []
         count = 0
         for buyer in address_bought_token:
-            if count > 700:
+            if count > 200:
                 break
             count += 1
-            data = ApiService.get_erc_20_transaction_api(buyer)
             print(buyer)
             transactions.append(
-                BuyerTransactions(buyer, get_erc_20_transactions_by_token(data, start_time, end_time, address, buyer)))
+                BuyerTransactions(buyer, EthTrackerService.get_erc_20_transactions(address, start_time)))
         return transactions
 
+    @staticmethod
+    def get_first_addresses(address, startTime=None):
+        transaction_url = ApiService.make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1,
+                                                  offset=10000,
+                                                  sort='asc')
+        response = get(transaction_url)
+        data = response.json()["result"]
 
-def get_account_balance(address):
-    balance_url = ApiService.make_api_url("account", "balance", address, tag="latest")
-    response = get(balance_url)
-    data = response.json()
-    value = int(data["result"]) / ETHER_VALUE
-    return value
+        index = 0
+        while startTime is not None and index < len(data):
+            time = datetime.fromtimestamp(int(data[index][EthTrackerService.TIME_STAMP_FIELD]))
+            if time < startTime:
+                index += 1
+                continue
+            else:
+                break
 
-
-def get_first_addresses(address, startTime=None):
-    transaction_url = ApiService.make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1, offset=10000,
-                                   sort='asc')
-    response = get(transaction_url)
-    data = response.json()["result"]
-
-    index = 0
-    while startTime is not None and index < len(data):
-        time = datetime.fromtimestamp(int(data[index][EthTrackerService.TIME_STAMP_FIELD]))
-        if time < startTime:
+        first_addresses = []
+        counter = 0
+        while index < len(data):
+            if counter > AMOUNT_OF_FIRST_ADDRESSES:
+                return first_addresses
+            from_addr = data[index]["from"]
+            first_addresses.append(from_addr)
+            counter += 1
             index += 1
-            continue
-        else:
-            break
+        return first_addresses
+        # print(balances)
 
-    first_addresses = []
-    counter = 0
-    while index < len(data):
-        if counter > AMOUNT_OF_FIRST_ADDRESSES:
-            return first_addresses
-        from_addr = data[index]["from"]
-        first_addresses.append(from_addr)
-        counter += 1
-        index += 1
-    return first_addresses
-    # print(balances)
-
-
-def get_erc_20_transactions(address, stop_time):
-    all_transactions = dict()
-    erc20_transactions = dict()
-    tokens_transactions = dict()
-
-    data = ApiService.get_erc_20_transaction_api(address)
-    data = reversed(data)
-    count = 0
-    for tx in data:
-        time = datetime.fromtimestamp(int(tx[EthTrackerService.TIME_STAMP_FIELD]))
-        if time < stop_time:
-            break
-        if count >= MAX_AMOUNT_OF_TRANSACTIONS:
-            break
-        token_name = tx[EthTrackerService.TOKEN_NAME_FIELD]
-        count += 1
-        hash = tx[EthTrackerService.HASH_FIELD]
-        if hash in all_transactions.keys():
-            continue
-        all_transactions[hash] = 1
-        from_address = tx["from"]
-        to_address = tx["to"]
-        amount_of_tokens = tx["value"]
-        gas_price = tx["gasPrice"]
-        gas_used = tx["gasUsed"]
-        gas_value = int(gas_price) * int(gas_used) / 10 ** 18
-        contract_address = tx["contractAddress"]
-        is_from = False
-        if from_address.lower() == address.lower():
-            is_from = True
-        if token_name in tokens_transactions:
-            token_hashes = tokens_transactions[token_name]
-            token_hashes.append([hash, is_from, gas_value])
-            erc20_transaction = TransactionErc20(token_name, hash, time, from_address, to_address, amount_of_tokens,
-                                                 gas_value, is_from, tx, contract_address)
-            erc20_transactions[token_name].append(erc20_transaction)
-        else:
-            tokens_transactions[token_name] = [[hash, is_from, gas_value]]
-            erc20_transaction = TransactionErc20(token_name, hash, time, from_address, to_address, amount_of_tokens,
-                                                 gas_value, is_from, tx, contract_address)
-            erc20_transactions[token_name] = [erc20_transaction]
-
-    return erc20_transactions
-
-
-def get_internal_transaction(transaction):
-    internal_transaction_url = BASE_URL + f"?module=account&action=txlistinternal&txhash={transaction.tx_hash}&apikey={API_KEY}"
-    response = get(internal_transaction_url)
-    data = response.json()["result"]
-    if len(data) == 0:
-        return 100000000000
-    first_value = data[-1]["value"]
-    value = 0
-    if len(data) > 1 and first_value != data[-2]["value"]:
-        for tx in data:
-            value += int(tx["value"])
-        value /= ETHER_VALUE
-    else:
-        value = int(data[-1]["value"]) / ETHER_VALUE
-    if not transaction.is_from:
-        value = -value
-    if transaction.from_address == '0x0000000000000000000000000000000000000000':
-        return 0
-    value -= transaction.gas_value
-    return value
+    @staticmethod
+    def get_addresses_bought_token(address):
+        transaction_url = ApiService.make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1,
+                                                  offset=10000,
+                                                  sort='desc')
+        response = get(transaction_url)
+        data = response.json()["result"]
+        return [tx["from"] for tx in data]
