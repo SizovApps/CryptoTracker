@@ -7,9 +7,8 @@ from requests import get
 
 from model.BuyerTransactions import BuyerTransactions
 from model.TransactionErc20 import *
-from model.Wallet import BLOCKED_TOKENS
-from services.api_service import make_api_url, get_addresses_bought_token_api, get_erc_20_transaction_api
-from services.transactions_service import get_erc_20_transactions_by_token
+from services.ApiService import make_api_url, get_addresses_bought_token_api, get_erc_20_transaction_api
+from services.TransactionsService import get_erc_20_transactions_by_token
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -57,7 +56,7 @@ class EthTracker:
         for tx in data:
             tx_hash = tx[EthTracker.HASH_FIELD]
             token_name = tx[EthTracker.TOKEN_NAME_FIELD]
-            handle_status = EthTracker.should_handle_transaction(tx, tx_hash, token_name, all_transactions,
+            handle_status = EthTracker.should_handle_transaction(tx, tx_hash, all_transactions,
                                                                  count_of_transactions, stop_time)
             if handle_status == HandleStatus.BREAK:
                 break
@@ -101,24 +100,18 @@ class EthTracker:
                                 gas_value, is_from, tx_data, contract_address)
 
     @staticmethod
-    def should_handle_transaction(tx, tx_hash, token_name, all_transactions, count_of_transactions, stop_time):
+    def should_handle_transaction(tx, tx_hash, all_transactions, count_of_transactions, stop_time):
         if tx_hash in all_transactions:
             return HandleStatus.CONTINUE
 
         if count_of_transactions >= MAX_AMOUNT_OF_TRANSACTIONS:
             return HandleStatus.BREAK
 
-        if datetime.fromtimestamp(int(tx[EthTracker.TIME_STAMP_FIELD])) < stop_time:
+        if stop_time is not None and datetime.fromtimestamp(int(tx[EthTracker.TIME_STAMP_FIELD])) < stop_time:
             return HandleStatus.BREAK
 
         if count_of_transactions >= MAX_AMOUNT_OF_TRANSACTIONS:
             return HandleStatus.BREAK
-
-        if token_name in BLOCKED_TOKENS:
-            return HandleStatus.CONTINUE
-
-        if token_name in BLOCKED_TOKENS:
-            return HandleStatus.CONTINUE
 
         return HandleStatus.CHECK
 
@@ -191,8 +184,6 @@ def get_erc_20_transactions(address, stop_time):
         if count >= MAX_AMOUNT_OF_TRANSACTIONS:
             break
         token_name = tx[EthTracker.TOKEN_NAME_FIELD]
-        if token_name in BLOCKED_TOKENS:
-            continue
         count += 1
         hash = tx[EthTracker.HASH_FIELD]
         if hash in all_transactions.keys():

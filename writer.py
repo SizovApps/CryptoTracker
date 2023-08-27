@@ -37,7 +37,7 @@ def write_wallet(wallet, token_name):
     with open(RESULTS_FOLDER_NAME + token_name + '.csv', 'a', newline='', encoding="utf-8") as all_file:
         all_writer = csv.writer(all_file, delimiter=';', quotechar=';', quoting=csv.QUOTE_MINIMAL)
         all_writer.writerow(
-            [wallet.address, wallet.profit, wallet.profit_in_ETH, wallet.full_enter, wallet.full_exit,
+            [wallet.address, wallet.profit_in_dollar, wallet.profit_in_ETH, wallet.full_enter, wallet.full_exit,
              wallet.count_of_profit, wallet.count_of_loss, wallet.win_rate, wallet.pnl])
 
 

@@ -2,7 +2,7 @@ import datetime
 
 from endpoints.make_info_for_address import get_transaction_of_token, get_profit_last_month
 from model.Wallet import Wallet
-from services.transactions_service import set_internal_transactions
+from services.TransactionsService import set_internal_transactions
 from writer import write_header_wallets_stats, create_excel, write_full_stats
 
 RESULTS = []
