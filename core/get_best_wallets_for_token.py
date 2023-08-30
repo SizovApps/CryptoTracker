@@ -1,3 +1,4 @@
+from core.make_info_for_addresses import make_info_for_addresses
 from model.Wallet import Wallet
 from services.EthTrackerService import EthTrackerService
 from services.InternalTransactionService import InternalTransactionService
@@ -8,7 +9,7 @@ RESULTS_ADDRESSES = []
 
 def get_best_wallets_for_token(token_address, token_name, max_best_addresses, start_time=None, end_time=None):
     WriterService.write_header_wallets_stats(token_name)
-    all_transactions = EthTrackerService.get_transaction_of_token(token_address, start_time, end_time)
+    all_transactions = EthTrackerService.get_transaction_of_token(token_address, token_name, start_time, end_time)
     results = []
     for buyer_transaction in all_transactions:
         if buyer_transaction.buyer_address in RESULTS_ADDRESSES:
@@ -24,16 +25,19 @@ def get_best_wallets_for_token(token_address, token_name, max_best_addresses, st
     print(results)
 
     for wallet in results:
-        if wallet.profit_in_dollar != 0:
-            x = 0
         WriterService.write_wallet(wallet, token_name)
-        # WriterService.write_full_stats(wallet.address, wallet.profit_in_dollar, wallet.profit_in_ETH,
-        #                                wallet.full_enter, wallet.full_exit,
-        #                                wallet.count_of_profit, wallet.count_of_loss, tokens=wallet.tokens)
 
-    # WriterService.create_excel(token_name, results)
+    WriterService.create_excel(token_name, results)
+    if max_best_addresses >= len(results):
+        result_wallets = make_result_addresses(results)
+        make_info_for_addresses(token_name, None, result_wallets)
+    else:
+        result_wallets = make_result_addresses(results[:max_best_addresses])
+        make_info_for_addresses(token_name, None, result_wallets)
 
-    # for i in range(max_best_addresses):
-    #     wallet = results[i]
-    #     print("Лучшие адрес: " + wallet.address)
-    #     get_profit(wallet.address)
+
+def make_result_addresses(result_wallets):
+    result_addresses = []
+    for wallet in result_wallets:
+        result_addresses.append(wallet.address)
+    return result_addresses

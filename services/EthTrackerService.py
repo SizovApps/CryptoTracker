@@ -36,6 +36,8 @@ class EthTrackerService:
     GAS_USED_FIELD = "gasUsed"
     CONTRACT_ADDRESS_FIELD = "contractAddress"
 
+    MAX_WALLETS_FROM_TOKEN = 5
+
     @staticmethod
     def get_account_balance(address):
         balance_url = ApiService.make_api_url("account", "balance", address, tag="latest")
@@ -45,7 +47,7 @@ class EthTrackerService:
         return value
 
     @staticmethod
-    def get_erc_20_transactions(address, stop_time):
+    def get_erc_20_transactions(address, stop_time, searching_token=None):
         all_transactions = set()
         erc20_transactions = dict()
         tokens_transactions = dict()
@@ -55,8 +57,8 @@ class EthTrackerService:
         for tx in data:
             tx_hash = tx[EthTrackerService.HASH_FIELD]
             token_name = tx[EthTrackerService.TOKEN_NAME_FIELD]
-            handle_status = EthTrackerService.should_handle_transaction(tx, tx_hash, all_transactions,
-                                                                        count_of_transactions, stop_time)
+            handle_status = EthTrackerService.should_handle_transaction(tx, tx_hash, token_name, all_transactions,
+                                                                        count_of_transactions, stop_time, searching_token)
             if handle_status == HandleStatus.BREAK:
                 break
             if handle_status == HandleStatus.CONTINUE:
@@ -97,7 +99,7 @@ class EthTrackerService:
                                 gas_value, is_from, tx_data, contract_address)
 
     @staticmethod
-    def should_handle_transaction(tx, tx_hash, all_transactions, count_of_transactions, stop_time):
+    def should_handle_transaction(tx, tx_hash, token_name, all_transactions, count_of_transactions, stop_time, searching_token):
         if tx_hash in all_transactions:
             return HandleStatus.CONTINUE
 
@@ -110,22 +112,29 @@ class EthTrackerService:
         if count_of_transactions >= MAX_AMOUNT_OF_TRANSACTIONS:
             return HandleStatus.BREAK
 
+        if searching_token is not None and token_name != searching_token:
+            return HandleStatus.CONTINUE
+
         return HandleStatus.CHECK
 
     @staticmethod
-    def get_transaction_of_token(address, start_time=None, end_time=None):
+    def get_transaction_of_token(address, token_name, start_time=None, end_time=None):
         data = ApiService.get_addresses_bought_token_api(address)
         address_bought_token = [tx["from"] for tx in data]
+        checked_addresses = set()
         print(f"Количество транзакций: {len(data)}.")
         transactions = []
         count = 0
         for buyer in address_bought_token:
-            if count > 200:
+            if buyer in checked_addresses:
+                continue
+            if count > EthTrackerService.MAX_WALLETS_FROM_TOKEN:
                 break
+            checked_addresses.add(buyer)
             count += 1
             print(buyer)
             transactions.append(
-                BuyerTransactions(buyer, EthTrackerService.get_erc_20_transactions(address, start_time)))
+                BuyerTransactions(buyer, EthTrackerService.get_erc_20_transactions(buyer, start_time, token_name)))
         return transactions
 
     @staticmethod

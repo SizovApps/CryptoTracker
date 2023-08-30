@@ -35,7 +35,7 @@ class InternalTransactionService:
                 value += int(tx[InternalTransactionService.PRICE_FIELD])
             value /= ETHER_VALUE
         else:
-            value = int(data[-1][InternalTransactionService.PRICE_FIELD]) / ETHER_VALUE
+            value = int(data[0][InternalTransactionService.PRICE_FIELD]) / ETHER_VALUE
         if not transaction.is_from:
             value = -value
         value -= transaction.gas_value
