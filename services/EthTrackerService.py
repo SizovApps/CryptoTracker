@@ -8,11 +8,13 @@ from requests import get
 from model.BuyerTransactions import BuyerTransactions
 from model.TransactionErc20 import *
 from services.ApiService import ApiService
+from services.transaction_log_readers.UniswapV2LogReader import UniswapV2LogReader
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 BASE_URL = "https://api.etherscan.io/api"
 ETHER_VALUE = 10 ** 18
+ETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 
 MIN_AMOUNT_OF_TRANSACTIONS = 10
 MAX_AMOUNT_OF_TRANSACTIONS = 50
@@ -27,6 +29,7 @@ class HandleStatus(Enum):
 
 class EthTrackerService:
     HASH_FIELD = "hash"
+    ADDRESS_FIELD = "contractAddress"
     TOKEN_NAME_FIELD = "tokenName"
     TIME_STAMP_FIELD = "timeStamp"
     FROM_FIELD = "from"
@@ -35,8 +38,10 @@ class EthTrackerService:
     GAS_PRICE_FIELD = "gasPrice"
     GAS_USED_FIELD = "gasUsed"
     CONTRACT_ADDRESS_FIELD = "contractAddress"
-
-    MAX_WALLETS_FROM_TOKEN = 5
+    LOGS_FIELD = "logs"
+    LOG_DATA_FIELD = "data"
+    LOG_TOPICS_FIELD = "topics"
+    LOG_ADDRESS_FIELD = "address"
 
     @staticmethod
     def get_account_balance(address):
@@ -52,11 +57,14 @@ class EthTrackerService:
         erc20_transactions = dict()
         tokens_transactions = dict()
 
+        uniswapV2LogReader = UniswapV2LogReader()
+
         data = ApiService.get_erc_20_transaction_api(address)
         count_of_transactions = 0
         for tx in data:
             tx_hash = tx[EthTrackerService.HASH_FIELD]
             token_name = tx[EthTrackerService.TOKEN_NAME_FIELD]
+
             handle_status = EthTrackerService.should_handle_transaction(tx, tx_hash, token_name, all_transactions,
                                                                         count_of_transactions, stop_time, searching_token)
             if handle_status == HandleStatus.BREAK:
@@ -65,16 +73,21 @@ class EthTrackerService:
                 continue
             count_of_transactions += 1
             all_transactions.add(tx_hash)
+            token_swapped = uniswapV2LogReader.get_swapped_tokens(tx_hash)
+            if token_swapped.is_buying:
+                print(f"ETH: {token_swapped.eth_amount} to {token_swapped.token_amount}: tx = {tx_hash}")
+            else:
+                print(f"Token: {token_swapped.token_amount} to ETH {token_swapped.eth_amount} tx = {tx_hash}")
 
             if token_name not in erc20_transactions:
                 erc20_transactions[token_name] = []
             erc20_transactions[token_name].append(EthTrackerService.make_erc_20_transaction(tx, address,
-                                                                                            tokens_transactions))
+                                                                                            tokens_transactions, token_swapped))
 
         return erc20_transactions
 
     @staticmethod
-    def make_erc_20_transaction(tx_data, address, tokens_transactions):
+    def make_erc_20_transaction(tx_data, address, tokens_transactions, tokens_swapped):
         time = datetime.fromtimestamp(int(tx_data[EthTrackerService.TIME_STAMP_FIELD]))
         token_name = tx_data[EthTrackerService.TOKEN_NAME_FIELD]
         tx_hash = tx_data[EthTrackerService.HASH_FIELD]
@@ -95,8 +108,8 @@ class EthTrackerService:
 
         token_hashes = tokens_transactions[token_name]
         token_hashes.append([tx_hash, is_from, gas_value])
-        return TransactionErc20(token_name, tx_hash, time, from_address, to_address, amount_of_tokens,
-                                gas_value, is_from, tx_data, contract_address)
+        return TransactionErc20(token_name, tx_hash, time, from_address, to_address, tokens_swapped.token_amount,
+                                gas_value, is_from, tx_data, contract_address, tokens_swapped)
 
     @staticmethod
     def should_handle_transaction(tx, tx_hash, token_name, all_transactions, count_of_transactions, stop_time, searching_token):
@@ -118,9 +131,10 @@ class EthTrackerService:
         return HandleStatus.CHECK
 
     @staticmethod
-    def get_transaction_of_token(address, token_name, start_time=None, end_time=None):
+    def get_transaction_of_token(address, token_name, max_transactions_to_check, start_time=None, end_time=None):
         data = ApiService.get_addresses_bought_token_api(address)
         address_bought_token = [tx["from"] for tx in data]
+        address_bought_token = address_bought_token[:max_transactions_to_check]
         checked_addresses = set()
         print(f"Количество транзакций: {len(data)}.")
         transactions = []
@@ -128,11 +142,11 @@ class EthTrackerService:
         for buyer in address_bought_token:
             if buyer in checked_addresses:
                 continue
-            if count > EthTrackerService.MAX_WALLETS_FROM_TOKEN:
+            if count > AMOUNT_OF_FIRST_ADDRESSES:
                 break
             checked_addresses.add(buyer)
             count += 1
-            print(buyer)
+            print(f"Пользователь купивший токен {buyer}")
             transactions.append(
                 BuyerTransactions(buyer, EthTrackerService.get_erc_20_transactions(buyer, start_time, token_name)))
         return transactions
@@ -174,3 +188,8 @@ class EthTrackerService:
         response = get(transaction_url)
         data = response.json()["result"]
         return [tx["from"] for tx in data]
+
+    @staticmethod
+    def get_best_wallets_by_win_rate(wallets):
+        wallets.sort(key=lambda x: x.win_rate, reverse=True)
+        return wallets

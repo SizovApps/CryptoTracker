@@ -10,6 +10,8 @@ class WriterService:
     TOKENS_HEADER = ['Token:', 'Вход', 'Выход', 'Профит в %', 'Профит в ETH',
                      'Профит в долларах', 'Денег осталось']
 
+    WIN_RATE_HEADER_LINE = ['Адрес', 'Win rate', 'Количество успешных', 'Количество неуспешных', 'PNL']
+
     RESULTS_FOLDER_NAME = "../results/"
 
     @staticmethod
@@ -54,3 +56,14 @@ class WriterService:
             for wallet in wallets:
                 token_file = pd.read_csv(WriterService.RESULTS_FOLDER_NAME + wallet.address + '.csv', sep=';')
                 token_file.to_excel(writer, sheet_name=wallet.address)
+
+    @staticmethod
+    def write_best_by_win_rate(wallets, token_name):
+        with open(WriterService.RESULTS_FOLDER_NAME + token_name + '_win_rate' + '.csv', 'w', newline='',
+                  encoding="utf-8") as win_rate_file:
+            win_rate_writer = csv.writer(win_rate_file, delimiter=';', quotechar=';', quoting=csv.QUOTE_MINIMAL)
+            win_rate_writer.writerow(WriterService.WIN_RATE_HEADER_LINE)
+            win_rate_writer.writerow("")
+            for wallet in wallets:
+                win_rate_writer.writerow(
+                    [wallet.address, wallet.win_rate, wallet.count_of_profit, wallet.count_of_loss, wallet.pnl])

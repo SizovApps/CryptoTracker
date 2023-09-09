@@ -1,4 +1,4 @@
-import stats.prices
+import stats.stats
 from model.TokenProfit import TokenProfit
 from model.TokenStats import TokenStats
 from services.MoralisService import MoralisService
@@ -6,8 +6,8 @@ from services.WriterService import WriterService
 
 
 class Wallet:
-    BNB_PRICE = stats.prices.BNB_PRICE
-    ETH_PRICE = stats.prices.ETH_PRICE
+    BNB_PRICE = stats.stats.BNB_PRICE
+    ETH_PRICE = stats.stats.ETH_PRICE
 
     def __init__(self, address, balance=0):
         self.address = address

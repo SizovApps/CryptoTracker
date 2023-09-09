@@ -32,10 +32,13 @@ def get_profit(address, token_name, start_time):
 def make_info_for_addresses(token_name, start_time, addresses):
     WriterService.write_header_wallets_stats(token_name)
 
-    results = []
+    wallets = []
     for address in addresses:
         wallet = get_profit(address, token_name, start_time)
         if wallet is not None:
-            results.append(wallet)
+            wallets.append(wallet)
 
-    WriterService.create_excel(token_name, results)
+    wallets_by_win_rate = EthTrackerService.get_best_wallets_by_win_rate(wallets)
+    WriterService.write_best_by_win_rate(wallets, token_name)
+    for wallet in wallets_by_win_rate:
+        print(f"{wallet.address}, winRate: {wallet.win_rate}, pnl: {wallet.pnl}, Count of wins: {wallet.count_of_profit},  Count of loses: {wallet.count_of_loss}")

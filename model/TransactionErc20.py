@@ -3,7 +3,7 @@ ETHER_VALUE = 10 ** 18
 
 class TransactionErc20:
     def __init__(self, token_name, tx_hash, date_time, from_address, to_address, quantity_of_token, gas_value, is_from,
-                 data, contract_address):
+                 data, contract_address, tokens_swapped=None):
         self.token_name = token_name
         self.tx_hash = tx_hash
         self.date_time = date_time
@@ -15,6 +15,7 @@ class TransactionErc20:
         self.internal_transaction_value = 0
         self.data = data
         self.contract_address = contract_address
+        self.tokens_swapped = tokens_swapped
 
     def __str__(self):
         name = self.token_name + ": " + str(self.internal_transaction_value) + " -> " + str(self.quantity_of_token)

@@ -27,3 +27,20 @@ class MoralisService:
             return data[MoralisService.USD_PRICE_FIELD]
         except:
             return 0
+
+    @staticmethod
+    def get_current_price(token_address):
+        params = {
+            "address": token_address,
+            "chain": MoralisService.ETH_CHAIN_FIELD
+        }
+        try:
+            data = evm_api.token.get_token_price(
+                api_key=MORALIS_API_KEY,
+                params=params,
+            )
+            if data[MoralisService.USD_PRICE_FIELD] is None:
+                return 0
+            return data[MoralisService.USD_PRICE_FIELD]
+        except:
+            return 0
