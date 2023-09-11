@@ -1,3 +1,3 @@
 from core.get_best_wallets_for_token import get_best_wallets_for_token
 
-get_best_wallets_for_token(token_address="0xe0c99ed6950ccb38347154abd06e10eba5a1f89a", token_name="BluiCoin", max_best_addresses=30, max_transactions_to_check=600)
+get_best_wallets_for_token(token_address="0x460188f753371bd5bc53f20992c59635dd5618bb", token_name="ELFBAR", max_best_addresses=30, max_transactions_to_check=100, swap_factory="uniswapv2")

@@ -20,7 +20,7 @@ class InternalTransactionService:
 
         value = transaction.tokens_swapped.eth_amount
 
-        if not transaction.tokens_swapped.is_buying:
+        if transaction.tokens_swapped.is_buying:
             value = -value
             value -= transaction.gas_value
         else:

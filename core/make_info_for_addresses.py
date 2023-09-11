@@ -8,7 +8,7 @@ NO_DEFINED_VALUE = 100000000000
 checked_addresses = []
 
 
-def get_profit(address, token_name, start_time):
+def get_profit(address, token_name, start_time, swap_factory):
     account_eth_balance = EthTrackerService.get_account_balance(address)
     print("Текущий баланс ETH: ", account_eth_balance)
 
@@ -16,7 +16,7 @@ def get_profit(address, token_name, start_time):
     if wallet.address in checked_addresses:
         return None
     try:
-        wallet.set_erc20_transactions(EthTrackerService.get_erc_20_transactions(address, start_time))
+        wallet.set_erc20_transactions(EthTrackerService.get_erc_20_transactions(address, start_time, swap_factory))
     except RuntimeError as error:
         print(error)
         print(error.args)
@@ -29,12 +29,12 @@ def get_profit(address, token_name, start_time):
     return wallet
 
 
-def make_info_for_addresses(token_name, start_time, addresses):
+def make_info_for_addresses(token_name, start_time, addresses, swap_factory):
     WriterService.write_header_wallets_stats(token_name)
 
     wallets = []
     for address in addresses:
-        wallet = get_profit(address, token_name, start_time)
+        wallet = get_profit(address, token_name, start_time, swap_factory)
         if wallet is not None:
             wallets.append(wallet)
 

@@ -8,7 +8,9 @@ from requests import get
 from model.BuyerTransactions import BuyerTransactions
 from model.TransactionErc20 import *
 from services.ApiService import ApiService
+from services.DexHandlerService import dexHandlerService
 from services.transaction_log_readers.UniswapV2LogReader import UniswapV2LogReader
+from services.transaction_log_readers.UniswapV3LogReader import UniswapV3LogReader
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -52,12 +54,10 @@ class EthTrackerService:
         return value
 
     @staticmethod
-    def get_erc_20_transactions(address, stop_time, searching_token=None):
+    def get_erc_20_transactions(address, stop_time, swap_factory, searching_token=None):
         all_transactions = set()
         erc20_transactions = dict()
         tokens_transactions = dict()
-
-        uniswapV2LogReader = UniswapV2LogReader()
 
         data = ApiService.get_erc_20_transaction_api(address)
         count_of_transactions = 0
@@ -73,12 +73,7 @@ class EthTrackerService:
                 continue
             count_of_transactions += 1
             all_transactions.add(tx_hash)
-            token_swapped = uniswapV2LogReader.get_swapped_tokens(tx_hash)
-            if token_swapped.is_buying:
-                print(f"ETH: {token_swapped.eth_amount} to {token_swapped.token_amount}: tx = {tx_hash}")
-            else:
-                print(f"Token: {token_swapped.token_amount} to ETH {token_swapped.eth_amount} tx = {tx_hash}")
-
+            token_swapped = dexHandlerService.factory_handler(tx_hash, token_name)
             if token_name not in erc20_transactions:
                 erc20_transactions[token_name] = []
             erc20_transactions[token_name].append(EthTrackerService.make_erc_20_transaction(tx, address,
@@ -87,13 +82,18 @@ class EthTrackerService:
         return erc20_transactions
 
     @staticmethod
+    def factory_handler(tx_hash, swap_factory):
+        if swap_factory == "uniswapv3":
+            return UniswapV3LogReader().get_swapped_tokens(tx_hash)
+        return UniswapV2LogReader().get_swapped_tokens(tx_hash)
+
+    @staticmethod
     def make_erc_20_transaction(tx_data, address, tokens_transactions, tokens_swapped):
         time = datetime.fromtimestamp(int(tx_data[EthTrackerService.TIME_STAMP_FIELD]))
         token_name = tx_data[EthTrackerService.TOKEN_NAME_FIELD]
         tx_hash = tx_data[EthTrackerService.HASH_FIELD]
         from_address = tx_data[EthTrackerService.FROM_FIELD]
         to_address = tx_data[EthTrackerService.TO_FIELD]
-        amount_of_tokens = tx_data[EthTrackerService.VALUE_FIELD]
         gas_price = tx_data[EthTrackerService.GAS_PRICE_FIELD]
         gas_used = tx_data[EthTrackerService.GAS_USED_FIELD]
         gas_value = int(gas_price) * int(gas_used) / 10 ** 18
@@ -131,7 +131,7 @@ class EthTrackerService:
         return HandleStatus.CHECK
 
     @staticmethod
-    def get_transaction_of_token(address, token_name, max_transactions_to_check, start_time=None, end_time=None):
+    def get_transaction_of_token(address, token_name, max_transactions_to_check, swap_factory, start_time=None, end_time=None):
         data = ApiService.get_addresses_bought_token_api(address)
         address_bought_token = [tx["from"] for tx in data]
         address_bought_token = address_bought_token[:max_transactions_to_check]
@@ -148,7 +148,7 @@ class EthTrackerService:
             count += 1
             print(f"Пользователь купивший токен {buyer}")
             transactions.append(
-                BuyerTransactions(buyer, EthTrackerService.get_erc_20_transactions(buyer, start_time, token_name)))
+                BuyerTransactions(buyer, EthTrackerService.get_erc_20_transactions(buyer, start_time, swap_factory, token_name)))
         return transactions
 
     @staticmethod
