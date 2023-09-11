@@ -29,18 +29,17 @@ class MoralisService:
             return 0
 
     @staticmethod
-    def get_current_price(token_address):
+    def get_block_number(time):
         params = {
-            "address": token_address,
-            "chain": MoralisService.ETH_CHAIN_FIELD
+            "chain": "eth",
+            "date": time,
+            # "chain": MoralisService.ETH_CHAIN_FIELD
         }
-        try:
-            data = evm_api.token.get_token_price(
-                api_key=MORALIS_API_KEY,
-                params=params,
-            )
-            if data[MoralisService.USD_PRICE_FIELD] is None:
-                return 0
-            return data[MoralisService.USD_PRICE_FIELD]
-        except:
-            return 0
+        data = evm_api.block.get_date_to_block(
+            api_key=MORALIS_API_KEY,
+            params=params,
+        )
+
+        return data["block"]
+
+

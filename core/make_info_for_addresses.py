@@ -1,6 +1,6 @@
 from model.Wallet import *
 from services.EthTrackerService import EthTrackerService
-from services.InternalTransactionService import InternalTransactionService
+from services.PriceOfTransactionService import PriceOfTransactionService
 from services.WriterService import WriterService
 
 NO_DEFINED_VALUE = 100000000000
@@ -21,7 +21,7 @@ def get_profit(address, token_name, start_time, swap_factory):
         print(error)
         print(error.args)
 
-    InternalTransactionService.set_internal_transactions(wallet)
+    PriceOfTransactionService.get_price_of_transactions(wallet)
 
     wallet.count_profit()
     checked_addresses.append(wallet.address)

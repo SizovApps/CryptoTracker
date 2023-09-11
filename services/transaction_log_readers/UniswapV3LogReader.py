@@ -11,7 +11,7 @@ swap_method_hash_v3 = "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e1
 class UniswapV3LogReader(ILogReader):
     typesArray = ['int256', 'int256', 'uint160', 'uint128', 'int24']
 
-    def get_swapped_tokens(self, logs, is_eth_first_token):
+    def get_swapped_tokens(self, logs, is_eth_first_token, wallet_address):
         tokens_swapped = TokensSwapped(0, 0, True)
         for log in logs:
             topics = log[self.LOGS_TOPICS_FIELD]
@@ -22,7 +22,6 @@ class UniswapV3LogReader(ILogReader):
                 if len(decoded_abi) != 5:
                     print("Error in decoded_abi: " + str(decoded_abi))
 
-                print(is_eth_first_token)
                 decoded_log_model = UniswapV3LogReader.parse_model(decoded_abi)
                 is_buying = True
                 if decoded_log_model.amount0 < 0:

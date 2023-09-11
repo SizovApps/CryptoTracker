@@ -14,6 +14,9 @@ class ILogReader:
     exchange_address = ""
     typesArray = []
 
+    def __init__(self, tx_hash):
+        self.tx_hash = tx_hash
+
     @abstractmethod
-    def get_swapped_tokens(self, tx_hash, is_eth_first_token):
+    def get_swapped_tokens(self, tx_hash, is_eth_first_token, wallet_address):
         pass

@@ -81,7 +81,7 @@ class Wallet:
                 dollars_lost=price_of_lost_tokens_in_dollars
             ))
             self.profit_in_ETH += token_profit.sum_in
-            self.profit_in_ETH += token_profit.sum_out
+            self.profit_in_ETH -= token_profit.sum_out
             self.full_enter += token_profit.sum_in
             self.full_exit += token_profit.sum_out
 

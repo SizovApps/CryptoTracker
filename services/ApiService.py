@@ -28,11 +28,13 @@ class ApiService:
             return None
 
     @staticmethod
-    def get_addresses_bought_token_api(address):
-        transaction_url = ApiService.make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1,
-                                                  offset=10000,
-                                                  sort='asc')
-        response = get(transaction_url)
+    def get_addresses_bought_token_api(token_pair_address, start_block, end_block):
+        # transaction_url = ApiService.make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1,
+        #                                           offset=10000,
+        #                                           sort='asc')
+        erc_20_transaction_url = ApiService.make_api_url("account", "tokentx", token_pair_address, startblock=start_block, endblock=end_block, offset=10000,
+                                                         sort='asc')
+        response = get(erc_20_transaction_url)
         return response.json()["result"]
 
     @staticmethod
@@ -44,8 +46,8 @@ class ApiService:
         return response.json()["result"]
 
     @staticmethod
-    def get_internal_transactions_api(transaction):
-        internal_transaction_url = BASE_URL + f"?module=account&action=txlistinternal&txhash={transaction.tx_hash}&apikey={API_KEY}"
+    def get_internal_transactions_api(tx_hash):
+        internal_transaction_url = BASE_URL + f"?module=account&action=txlistinternal&txhash={tx_hash}&apikey={API_KEY}"
         response = get(internal_transaction_url)
         return response.json()["result"]
 
@@ -59,3 +61,8 @@ class ApiService:
             print(response)
             return None
 
+
+# print(ApiService.get_erc_20_transaction_api("0xeaf24c54d3d531c0cc9130a500170e9c77fdc1b3"))
+# print(ApiService.get_addresses_bought_token_api("0xa57ed6e54be8125bbe45d6ca330e45ebb71ef11e")[-1])
+# print(ApiService.get_receipt("0x89d724b54343d1b17943d6daffe41365cbc93beb2a98a7a614d519a51b04d0ea"))
+# print(ApiService.get_addresses_bought_token_api("0x0a86421ee3a48fa6a2e1b7775860b39d96e1453a", 18182182, 18182501))
