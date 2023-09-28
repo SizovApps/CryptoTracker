@@ -29,9 +29,6 @@ class ApiService:
 
     @staticmethod
     def get_addresses_bought_token_api(token_pair_address, start_block, end_block):
-        # transaction_url = ApiService.make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1,
-        #                                           offset=10000,
-        #                                           sort='asc')
         erc_20_transaction_url = ApiService.make_api_url("account", "tokentx", token_pair_address, startblock=start_block, endblock=end_block, offset=10000,
                                                          sort='asc')
         response = get(erc_20_transaction_url)
@@ -61,6 +58,11 @@ class ApiService:
             print(response)
             return None
 
+    @staticmethod
+    def get_token_abi(token_address):
+        get_abi_url = BASE_URL + f"?module=contract&action=getabi&address={token_address}&apikey={API_KEY}"
+        response = get(get_abi_url)
+        return response.json()["result"]
 
 # print(ApiService.get_erc_20_transaction_api("0xeaf24c54d3d531c0cc9130a500170e9c77fdc1b3"))
 # print(ApiService.get_addresses_bought_token_api("0xa57ed6e54be8125bbe45d6ca330e45ebb71ef11e")[-1])

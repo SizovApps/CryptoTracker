@@ -2,7 +2,7 @@ from eth_abi import abi
 
 from model.TokensSwapped import TokensSwapped
 from services.transaction_log_readers.ILogReader import ILogReader
-from stats.stats import ETHER_VALUE
+from static.stats import ETHER_VALUE
 
 swap_method_hash_v2 = "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822"
 
@@ -14,6 +14,7 @@ class UniswapV2LogReader(ILogReader):
     def get_swapped_tokens(self, logs, is_eth_first_token, wallet_address):
         tokens_swapped = TokensSwapped(0, 0, True)
         eth_token_amount = self.get_eth_token_amounts(logs)
+        already_added_tokens_amounts = []
         for log in logs:
             topics = log[self.LOGS_TOPICS_FIELD]
             if topics[0] == swap_method_hash_v2:
@@ -25,25 +26,37 @@ class UniswapV2LogReader(ILogReader):
 
                 if decoded_abi[0] in eth_token_amount or decoded_abi[2] in eth_token_amount:
                     if decoded_abi[0] != 0:
+                        if decoded_abi[3] in already_added_tokens_amounts:
+                            continue
+                        already_added_tokens_amounts.append(decoded_abi[3])
                         tokens_swapped = TokensSwapped(
                             eth_amount=tokens_swapped.eth_amount + decoded_abi[0] / ETHER_VALUE,
                             token_amount=tokens_swapped.token_amount + decoded_abi[3],
                             is_buying=True
                         )
                     else:
+                        if decoded_abi[1] in already_added_tokens_amounts:
+                            continue
+                        already_added_tokens_amounts.append(decoded_abi[1])
                         tokens_swapped = TokensSwapped(
                             eth_amount=tokens_swapped.eth_amount + decoded_abi[2] / ETHER_VALUE,
                             token_amount=tokens_swapped.token_amount + decoded_abi[1],
                             is_buying=False
                         )
                 else:
+                    if decoded_abi[0] in already_added_tokens_amounts:
+                        continue
                     if decoded_abi[0] != 0:
+                        already_added_tokens_amounts.append(decoded_abi[0])
                         tokens_swapped = TokensSwapped(
                             eth_amount=tokens_swapped.eth_amount + decoded_abi[3] / ETHER_VALUE,
                             token_amount=tokens_swapped.token_amount + decoded_abi[0],
                             is_buying=False
                         )
                     else:
+                        if decoded_abi[2] in already_added_tokens_amounts:
+                            continue
+                        already_added_tokens_amounts.append(decoded_abi[2])
                         tokens_swapped = TokensSwapped(
                             eth_amount=tokens_swapped.eth_amount + decoded_abi[1] / ETHER_VALUE,
                             token_amount=tokens_swapped.token_amount + decoded_abi[2],

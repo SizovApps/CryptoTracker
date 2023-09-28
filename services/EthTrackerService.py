@@ -13,7 +13,8 @@ from services.MoralisService import MoralisService
 from services.Web3Service import Web3Service
 from services.transaction_log_readers.UniswapV2LogReader import UniswapV2LogReader
 from services.transaction_log_readers.UniswapV3LogReader import UniswapV3LogReader
-from stats.fields_names import TOKEN_NAME_FIELD, HASH_FIELD, VALUE_FIELD
+from static.fields_names import TOKEN_NAME_FIELD, HASH_FIELD, VALUE_FIELD, FROM_FIELD
+from static.stats import ETH_PRICE
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -22,8 +23,10 @@ ETHER_VALUE = 10 ** 18
 ETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 
 MIN_AMOUNT_OF_TRANSACTIONS = 10
-MAX_AMOUNT_OF_TRANSACTIONS = 50
+MAX_AMOUNT_OF_TRANSACTIONS = 200
 AMOUNT_OF_FIRST_ADDRESSES = 100
+
+token_prices = dict()
 
 
 class HandleStatus(Enum):
@@ -56,7 +59,7 @@ class EthTrackerService:
         return value
 
     @staticmethod
-    def get_erc_20_transactions(address, from_time, swap_factory, searching_token=None):
+    def get_erc_20_transactions(address, from_time, searching_token=None, max_amount_of_tokens=15):
         all_transactions = set()
         erc20_transactions = dict()
         tokens_transactions = dict()
@@ -77,7 +80,8 @@ class EthTrackerService:
 
             handle_status = EthTrackerService.should_handle_transaction(tx, tx_hash, token_name, all_transactions,
                                                                         count_of_transactions, from_time,
-                                                                        searching_token)
+                                                                        searching_token, len(erc20_transactions.keys()),
+                                                                        max_amount_of_tokens)
             if handle_status == HandleStatus.BREAK:
                 break
             if handle_status == HandleStatus.CONTINUE:
@@ -127,7 +131,8 @@ class EthTrackerService:
                                 gas_value, is_from, tx_data, contract_address, tokens_swapped)
 
     @staticmethod
-    def should_handle_transaction(tx, tx_hash, token_name, all_transactions, count_of_transactions, stop_time, searching_token):
+    def should_handle_transaction(tx, tx_hash, token_name, all_transactions, count_of_transactions, stop_time,
+                                  searching_token, tokens_count, max_amount_of_tokens):
         if tx_hash in all_transactions:
             return HandleStatus.CONTINUE
 
@@ -137,23 +142,31 @@ class EthTrackerService:
         if count_of_transactions >= MAX_AMOUNT_OF_TRANSACTIONS:
             return HandleStatus.BREAK
 
+        if tokens_count > max_amount_of_tokens:
+            return HandleStatus.BREAK
+
         if searching_token is not None and token_name != searching_token:
             return HandleStatus.CONTINUE
 
         return HandleStatus.CHECK
 
     @staticmethod
-    def get_transaction_of_token(address, token_name, max_transactions_to_check, swap_factory, token_pair_address, token_created_time, start_time=None, end_time=None):
-        data = ApiService.get_addresses_bought_token_api(token_pair_address, MoralisService.get_block_number(str(start_time)), MoralisService.get_block_number(str(end_time)))
+    def get_transactions_of_token(token_name, max_transactions_to_check, swap_factory, token_pair_address,
+                                  token_created_time, start_time=None, end_time=None):
+        print("start get_transactions_of_token")
+        data = ApiService.get_addresses_bought_token_api(token_pair_address,
+                                                         MoralisService.get_block_number(str(start_time)),
+                                                         MoralisService.get_block_number(str(end_time)))
+        print("got data from get_transactions_of_token")
         data_in_time = []
         if start_time is not None and end_time is not None:
             for tx in data:
-                is_contract_from = Web3Service.is_contract(tx[EthTrackerService.FROM_FIELD])
-                if not is_contract_from and start_time < int(tx[EthTrackerService.TIME_STAMP_FIELD]) < end_time:
+                if tx[EthTrackerService.FROM_FIELD] != token_pair_address and start_time < int(
+                        tx[EthTrackerService.TIME_STAMP_FIELD]) < end_time:
                     data_in_time.append(tx)
         else:
             data_in_time = data
-        address_interacted_with_token = [tx["from"] for tx in data_in_time]
+        address_interacted_with_token = list(set([tx[FROM_FIELD] for tx in data_in_time]))
 
         if len(address_interacted_with_token) > max_transactions_to_check:
             address_interacted_with_token = address_interacted_with_token[:max_transactions_to_check]
@@ -171,7 +184,8 @@ class EthTrackerService:
             count += 1
             print(f"Пользователь купивший токен {buyer}")
             transactions.append(
-                BuyerTransactions(buyer, EthTrackerService.get_erc_20_transactions(buyer, token_created_time, swap_factory, token_name)))
+                BuyerTransactions(buyer,
+                                  EthTrackerService.get_erc_20_transactions(buyer, token_created_time, token_name)))
         return transactions
 
     @staticmethod
@@ -196,7 +210,7 @@ class EthTrackerService:
         while index < len(data):
             if counter > AMOUNT_OF_FIRST_ADDRESSES:
                 return first_addresses
-            from_addr = data[index]["from"]
+            from_addr = data[index][FROM_FIELD]
             first_addresses.append(from_addr)
             counter += 1
             index += 1
@@ -204,15 +218,29 @@ class EthTrackerService:
         # print(balances)
 
     @staticmethod
-    def get_addresses_bought_token(address):
-        transaction_url = ApiService.make_api_url("account", "txlist", address, startblock=0, endblock=99999999, page=1,
-                                                  offset=10000,
-                                                  sort='desc')
-        response = get(transaction_url)
-        data = response.json()["result"]
-        return [tx["from"] for tx in data]
-
-    @staticmethod
     def get_best_wallets_by_win_rate(wallets):
         wallets.sort(key=lambda x: x.win_rate, reverse=True)
         return wallets
+
+    @staticmethod
+    def get_current_price(token_address, pair_address, token_name, wallet_address, tokens_amount=0):
+        if token_address in token_prices:
+            return token_prices[token_address]
+        if not pair_address:
+            return 0
+        data = ApiService.get_erc_20_transaction_api(pair_address)
+        if not data or len(data) == 0:
+            return 0
+        swapped_tokens = dexHandlerService.factory_handler(data[0][HASH_FIELD], token_name, wallet_address,
+                                                           tokens_amount)
+        token_decimals = Web3Service.get_token_decimals(token_address)
+        swapped_tokens.token_amount = swapped_tokens.token_amount / (10 ** token_decimals)
+
+        if swapped_tokens.token_amount == 0:
+            return 0
+
+        price = swapped_tokens.eth_amount * ETH_PRICE / swapped_tokens.token_amount
+        token_prices[token_address] = price
+        return price
+
+# EthTrackerService.get_current_price("0xc32c2d9768919deaee60f7eb163a293c6eb81be8")

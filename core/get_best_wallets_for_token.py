@@ -7,11 +7,13 @@ from services.WriterService import WriterService
 WALLETS_INTERACTED_ADDRESSES = []
 
 
-def get_best_wallets_for_token(token_address, token_name, max_best_addresses, max_transactions_to_check, swap_factory, token_pair_address, token_created_time, start_time=None, end_time=None):
+def get_best_wallets_for_token(token_name, max_best_addresses, max_transactions_to_check, swap_factory, token_pair_address, token_created_time, start_time=None, end_time=None):
     WriterService.write_header_wallets_stats(token_name)
-    all_transactions = EthTrackerService.get_transaction_of_token(token_address, token_name, max_transactions_to_check, swap_factory, token_pair_address, token_created_time, start_time, end_time)
+
+    buyer_transactions = EthTrackerService.get_transactions_of_token(token_name, max_transactions_to_check, swap_factory, token_pair_address, token_created_time, start_time, end_time)
+
     wallets_interacted_with_token = []
-    for buyer_transaction in all_transactions:
+    for buyer_transaction in buyer_transactions:
         if buyer_transaction.buyer_address in WALLETS_INTERACTED_ADDRESSES:
             continue
         wallet = Wallet(buyer_transaction.buyer_address)

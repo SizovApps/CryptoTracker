@@ -40,7 +40,7 @@ class DexHandlerService:
         if selected_dex == DEX.UNISWAP_V2:
             return UniswapV2LogReader(tx_hash).get_swapped_tokens(logs, token_name < self.ETH_NAME, wallet_address)
         elif selected_dex == DEX.UNISWAP_V3:
-            return UniswapV3LogReader(tx_hash).get_swapped_tokens(logs, token_name > self.ETH_NAME, wallet_address)
+            return UniswapV3LogReader(tx_hash).get_swapped_tokens(logs)
         elif selected_dex == DEX.BANANA_BOT:
             return BananaBotLogReader(tx_hash).get_swapped_tokens(logs, token_name < self.ETH_NAME, wallet_address, tokens_amount)
 

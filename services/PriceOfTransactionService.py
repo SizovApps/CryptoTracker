@@ -1,5 +1,5 @@
 from services.ApiService import ApiService
-from stats.fields_names import VALUE_FIELD, FROM_FIELD, TO_FIELD
+from static.fields_names import VALUE_FIELD, FROM_FIELD, TO_FIELD
 
 ETHER_VALUE = 10 ** 18
 

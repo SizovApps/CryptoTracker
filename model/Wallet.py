@@ -1,13 +1,15 @@
-import stats.stats
+import static.stats
 from model.TokenProfit import TokenProfit
 from model.TokenStats import TokenStats
+from services.EthTrackerService import EthTrackerService
 from services.MoralisService import MoralisService
+from services.TokenPairsService import TokenPairsService
 from services.WriterService import WriterService
 
 
 class Wallet:
-    BNB_PRICE = stats.stats.BNB_PRICE
-    ETH_PRICE = stats.stats.ETH_PRICE
+    BNB_PRICE = static.stats.BNB_PRICE
+    ETH_PRICE = static.stats.ETH_PRICE
 
     def __init__(self, address, balance=0):
         self.address = address
@@ -61,7 +63,13 @@ class Wallet:
         tokens = []
         for token_name in self.internal_transactions:
             token_profit = self.get_sum_by_token(token_name)
-            price_of_lost_tokens_in_dollars = self.tokens[token_name] * MoralisService.get_current_price(self.token_contracts[token_name])
+            current_token_price = EthTrackerService.get_current_price(
+                token_address=self.token_contracts[token_name],
+                pair_address=TokenPairsService.get_token_pair(self.token_contracts[token_name]),
+                token_name=token_name,
+                wallet_address=self.address
+            )
+            price_of_lost_tokens_in_dollars = self.tokens[token_name] * current_token_price
             if self.tokens[token_name] < 0:
                 price_of_lost_tokens_in_dollars = 0
             token_profit.sum_of_profit += price_of_lost_tokens_in_dollars / self.ETH_PRICE
